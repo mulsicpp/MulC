@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <chaiscript/chaiscript.hpp>
 
-#include "mulc.h"
-
 static void print(const char *msg) {
     printf("%s\n", msg);
 }
