@@ -1,5 +1,6 @@
 #include <stdio.h>
-#include <chaiscript/chaiscript.hpp>
+
+#include "Mulc.h"
 
 static void print(const char *msg) {
     printf("%s\n", msg);
@@ -7,12 +8,7 @@ static void print(const char *msg) {
 
 int main(int argc, char *argv[])
 {
-    chaiscript::ChaiScript chai;
-
-    chai.add(chaiscript::var("Hello World!"), "msg");
-    chai.add(chaiscript::fun(&print), "print");
-
-    chai.eval_file("test_script.chai");
+    Mulc::run();
 
     return 0;
 }
