@@ -9,7 +9,7 @@
 #endif
 
 struct Mode {
-    enum class OS {
+    enum class Os {
         UNKNOWN,
         WINDOWS,
         LINUX

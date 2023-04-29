@@ -4,17 +4,67 @@
 #include "Flags.h"
 #include "ProjectInfo.h"
 
-class Mulc {
+#include <filesystem>
+
+class Mulc
+{
 private:
     static Mode mode;
     static Flags flags;
     static ProjectInfo projectInfo;
 
+    static std::filesystem::path builderPath;
+    static std::filesystem::path initialPath;
+    static std::filesystem::path buildFilePath;
+
+    static std::filesystem::path binPath;
+
 public:
-    static void run(void);
+    static void readArgs(int argc, char *argv[]);
+    static void init(void);
+    static void runScript(void);
 
 private:
-    static void init(void);
-    static void readArgs(int argc, char *argv[]);
-    static void runScript(void);
+    struct ScriptAPI
+    {
+        static void runScript(void);
+
+        static void output(std::string path, std::string type);
+
+        static void group(std::string group);
+
+        static void add_source(std::string source);
+        static void remove_source(std::string source);
+
+        static void std(std::string std);
+        static void include_path(std::string includePath);
+        static void define(std::string macro);
+        static void compile_flag(std::string compileFlag);
+
+        static void library(std::string lib);
+        static void library_path(std::string libPath);
+        static void named_library(std::string namedLib);
+        static void link_flag(std::string linkFlag);
+
+        static void require(std::string proj);
+
+        static void export_files(std::string srcPath, std::string dstPath);
+        static void export_headers(std::string srcPath, std::string dstPath, bool clearDst = false);
+
+        static void use_dependency(std::string dependency);
+
+        static void dep_include_path(std::string includePath);
+        static void dep_library(std::string lib);
+        static void dep_library_path(std::string libPath);
+        static void dep_named_library(std::string namedLib);
+
+        static void build(void);
+
+        static void cmd(std::string cmd);
+        static void msg(std::string msg);
+
+        static std::string app(std::string name);
+        static std::string lib(std::string name);
+        static std::string dll(std::string name);
+    };
 };

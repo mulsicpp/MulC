@@ -1,4 +1,4 @@
-linux/mulc: linux/bin/main.o linux/bin/Flags.o linux/bin/Mulc.o
+linux/mulc: linux/bin/main.o linux/bin/Flags.o linux/bin/Mulc.o linux/bin/Mulc.ScriptAPI.o
 	g++ -o linux/mulc linux/bin/main.o linux/bin/Flags.o linux/bin/Mulc.o
 
 linux/bin/main.o: src/main.cpp
@@ -9,3 +9,6 @@ linux/bin/Flags.o: src/Flags.cpp
 
 linux/bin/Mulc.o: src/Mulc.cpp
 	g++ -c -o linux/bin/Mulc.o -std=c++17 src/Mulc.cpp
+
+linux/bin/Mulc.ScriptAPI.o: src/Mulc.ScriptAPI.cpp
+	g++ -c -o linux/bin/Mulc.ScriptAPI.o -std=c++17 src/Mulc.ScriptAPI.cpp

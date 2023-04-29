@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 project(mulc)
 
-add_executable(mulc src/main.cpp src/Flags.cpp src/Mulc.cpp)
+add_executable(mulc src/main.cpp src/Flags.cpp src/Mulc.cpp src/Mulc.ScriptAPI.cpp)
 
 target_precompile_headers(mulc PUBLIC ChaiScript/include/chaiscript/chaiscript.hpp)
 target_include_directories(mulc PUBLIC ChaiScript/include)

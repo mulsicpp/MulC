@@ -2,13 +2,12 @@
 
 #include "Mulc.h"
 
-static void print(const char *msg) {
-    printf("%s\n", msg);
-}
-
 int main(int argc, char *argv[])
 {
-    Mulc::run();
+    Mulc::readArgs(argc, argv);
+    
+    Mulc::init();
+    Mulc::runScript();
 
     return 0;
 }
