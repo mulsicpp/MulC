@@ -25,11 +25,22 @@ public:
     static void runScript(void);
 
 private:
-    struct ScriptAPI
+    enum class Type
     {
-        static void runScript(void);
+        APP,
+        LIB,
+        DLL
+    };
 
-        static void output(std::string path, std::string type);
+    static void build(Type type, std::string path);
+
+private:
+    class ScriptAPI
+    {
+    private:
+        static ProjectInfo *info;
+    public:
+        static void runScript(std::string script, ProjectInfo *info);
 
         static void group(std::string group);
 
@@ -48,7 +59,7 @@ private:
 
         static void require(std::string proj);
 
-        static void export_files(std::string srcPath, std::string dstPath);
+        static void export_files(std::string srcPath, std::string dstPath, bool clearDst = false);
         static void export_headers(std::string srcPath, std::string dstPath, bool clearDst = false);
 
         static void use_dependency(std::string dependency);
@@ -58,7 +69,9 @@ private:
         static void dep_library_path(std::string libPath);
         static void dep_named_library(std::string namedLib);
 
-        static void build(void);
+        static void build_app(std::string path);
+        static void build_lib(std::string path);
+        static void build_dll(std::string path);
 
         static void cmd(std::string cmd);
         static void msg(std::string msg);

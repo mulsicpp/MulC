@@ -6,15 +6,6 @@
 
 struct ProjectInfo
 {
-    enum Type
-    {
-        APP,
-        LIB,
-        DLL
-    } type;
-
-    std::string path;
-
     std::string group;
 
     struct TranslationUnit
@@ -29,7 +20,8 @@ struct ProjectInfo
     std::string linkerFlags;
 
     std::vector<std::string> includePaths;
-    std::string libs;
+    std::vector<std::string> libs;
+    std::vector<std::string> libPaths;
 
     struct ExportDependencies
     {

@@ -38,3 +38,7 @@
 build
 linux
 windows
+
+# Test files
+build.mulc
+retval.ps1
