@@ -11,4 +11,4 @@ linux/bin/Mulc.o: src/Mulc.cpp
 	g++ -c -o linux/bin/Mulc.o -std=c++17 src/Mulc.cpp
 
 linux/bin/Mulc.runScript.o: src/Mulc.runScript.cpp
-	g++ -c -o linux/bin/Mulc.runScript.o -std=c++17 src/Mulc.runScript.cpp
+	g++ -c -o linux/bin/Mulc.runScript.o -std=c++17 -IChaiScript/include src/Mulc.runScript.cpp

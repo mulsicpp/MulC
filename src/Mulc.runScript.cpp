@@ -96,6 +96,9 @@ void Mulc::ScriptAPI::runScript(std::string script)
     ADD_CHAI_FUNCTION_MULTI(chai, cmd);
     ADD_CHAI_FUNCTION_MULTI(chai, msg);
 
+    ADD_CHAI_FUNCTION_NAMED(chai, export_files_std, "export_files");
+    ADD_CHAI_FUNCTION_NAMED(chai, export_headers_std, "export_headers");
+
     ADD_CHAI_FUNCTION_NAMED(chai, combine_string_string, "&");
     ADD_CHAI_FUNCTION_NAMED(chai, combine_list_string, "&");
     ADD_CHAI_FUNCTION_NAMED(chai, combine_string_list, "&");

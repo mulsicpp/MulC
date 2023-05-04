@@ -62,8 +62,11 @@ private:
 
         static void require(std::string proj);
 
-        static void export_files(std::string srcPath, std::string dstPath, bool clearDst = false);
-        static void export_headers(std::string srcPath, std::string dstPath, bool clearDst = false);
+        static void export_files(std::string srcPath, std::string dstPath, bool clearDst);
+        static void export_headers(std::string srcPath, std::string dstPath, bool clearDst);
+
+        static void export_files_std(std::string srcPath, std::string dstPath);
+        static void export_headers_std(std::string srcPath, std::string dstPath);
 
         static void use_dependency(std::string dependency);
 

@@ -291,10 +291,82 @@ void Mulc::ScriptAPI::require(std::string proj)
 
 void Mulc::ScriptAPI::export_files(std::string srcPath, std::string dstPath, bool clearDst)
 {
+    using CopyOptions = std::filesystem::copy_options;
+
+    auto co = CopyOptions::recursive | (clearDst ? CopyOptions::overwrite_existing : CopyOptions::skip_existing);
+    if (clearDst && EXISTS(dstPath))
+    {
+        if (isSubPath(srcPath, dstPath))
+        {
+            warning("Could not export \'%s\' with cleared destination, because the destination is inside the source", srcPath.c_str());
+            return;
+        }
+        if (isSubPath(dstPath, srcPath))
+        {
+            warning("Could not export \'%s\' with cleared destination, because the source is inside the destination", srcPath.c_str());
+            return;
+        }
+        std::filesystem::remove_all(dstPath);
+    }
+
+    if (EXISTS(srcPath))
+    {
+        std::filesystem::create_directories(dstPath);
+        std::filesystem::copy(srcPath, dstPath, co);
+        printf(F_CYAN "Exported \'%s\' to \'%s\'\n" F_RESET, srcPath.c_str(), dstPath.c_str());
+    }
+    else
+        warning("Could not export \'%s\', because it does not exist", srcPath.c_str());
 }
 
 void Mulc::ScriptAPI::export_headers(std::string srcPath, std::string dstPath, bool clearDst)
 {
+    using CopyOptions = std::filesystem::copy_options;
+
+    auto co = CopyOptions::recursive | (clearDst ? CopyOptions::overwrite_existing : CopyOptions::skip_existing);
+    if (clearDst && EXISTS(dstPath))
+    {
+        if (isSubPath(srcPath, dstPath))
+        {
+            warning("Could not export headers in \'%s\' with cleared destination, because the destination is inside the source", srcPath.c_str());
+            return;
+        }
+        if (isSubPath(srcPath, dstPath))
+        {
+            warning("Could not export headers in \'%s\' with cleared destination, because the destination is inside the source", srcPath.c_str());
+            return;
+        }
+        std::filesystem::remove_all(dstPath);
+    }
+
+    if (!EXISTS(srcPath))
+    {
+        warning("Could not export headers, because the folder \'%s\' does not exist", srcPath.c_str());
+        return;
+    }
+    if (!std::filesystem::is_directory(srcPath))
+    {
+        warning("Could not export headers, because \'%s\' is not a folder", srcPath.c_str());
+        return;
+    }
+    auto iterator = std::filesystem::recursive_directory_iterator(srcPath);
+    for (const auto &entry : iterator)
+    {
+        if (entry.is_regular_file() && (entry.path().extension() == ".h" || entry.path().extension() == ".hpp"))
+        {
+            auto dstFile = std::filesystem::path(dstPath) / std::filesystem::proximate(entry.path(), srcPath).parent_path();
+            std::filesystem::create_directories(dstFile);
+            std::filesystem::copy(entry.path(), std::filesystem::canonical(dstFile) / entry.path().filename(), co);
+        }
+    }
+    printf(F_CYAN "Exported headers from \'%s\' to \'%s\'\n" F_RESET, srcPath.c_str(), dstPath.c_str());
+}
+
+void Mulc::ScriptAPI::export_files_std(std::string srcPath, std::string dstPath) {
+    export_files(srcPath, dstPath, false);
+}
+void Mulc::ScriptAPI::export_headers_std(std::string srcPath, std::string dstPath) {
+    export_headers(srcPath, dstPath, false);
 }
 
 void Mulc::ScriptAPI::use_dependency(std::string dependency)
