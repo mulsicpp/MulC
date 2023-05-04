@@ -4,10 +4,17 @@
 
 int main(int argc, char *argv[])
 {
-    Mulc::readArgs(argc, argv);
-    
-    Mulc::init();
-    Mulc::runScript();
+    try
+    {
+        Mulc::readArgs(argc, argv);
+
+        Mulc::init();
+        Mulc::runScript();
+    }
+    catch (std::exception e)
+    {
+        printf("%s\n", e.what());
+    }
 
     return 0;
 }

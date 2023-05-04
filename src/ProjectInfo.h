@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <filesystem>
 
 struct ProjectInfo
 {
@@ -33,4 +34,8 @@ struct ProjectInfo
     
 
     std::unordered_map<std::string, std::vector<std::string>> headerDependencies;
+
+    std::filesystem::path buildFilePath;
+
+    std::filesystem::path binPath;
 };

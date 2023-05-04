@@ -17,15 +17,12 @@
 
 Mode Mulc::mode;
 Flags Mulc::flags;
-ProjectInfo Mulc::projectInfo;
 
 std::filesystem::path Mulc::builderPath = "";
 std::filesystem::path Mulc::initialPath = "";
-std::filesystem::path Mulc::buildFilePath = "";
 
-std::filesystem::path Mulc::binPath = "";
-
-ProjectInfo *Mulc::ScriptAPI::info;
+ProjectInfo *Mulc::ScriptAPI::info = nullptr;
+std::vector<ProjectInfo *> Mulc::ScriptAPI::infoStack;
 
 static bool isSubPath(const std::filesystem::path &base, const std::filesystem::path &sub)
 {
@@ -119,19 +116,32 @@ void Mulc::init(void)
     ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
 #endif
     builderPath = std::filesystem::canonical(std::filesystem::path(result).parent_path());
+}
 
-    if (std::filesystem::is_directory(flags.path))
+void Mulc::runScript(void)
+{
+    ScriptAPI::runScript(flags.path);
+}
+
+void Mulc::ScriptAPI::build(Mulc::Type type, std::string path)
+{
+}
+
+std::filesystem::path Mulc::ScriptAPI::getScriptPath(std::string path)
+{
+    std::string ret;
+    if (std::filesystem::is_directory(path))
     {
         std::vector<std::filesystem::path> scriptFiles;
 
-        auto iterator = std::filesystem::directory_iterator(flags.path);
+        auto iterator = std::filesystem::directory_iterator(path);
         for (const auto &entry : iterator)
         {
             if (entry.is_regular_file() && entry.path().extension() == ".mulc")
                 scriptFiles.push_back(entry.path());
         }
         if (scriptFiles.size() == 1)
-            buildFilePath = scriptFiles[0].string();
+            ret = scriptFiles[0].string();
         else if (scriptFiles.size() == 0)
             error("No build script found");
         else
@@ -141,23 +151,40 @@ void Mulc::init(void)
     }
     else
     {
-        if (std::filesystem::path(flags.path).extension() == ".mulc")
-            buildFilePath = flags.path;
+        if (std::filesystem::path(path).extension() == ".mulc")
+            ret = path;
         else
-            error("The specified file \'%s\' is not a build script", flags.path.c_str());
+            error("The specified file \'%s\' is not a build script", path.c_str());
     }
 
-    buildFilePath = std::filesystem::canonical(buildFilePath);
+    return std::filesystem::canonical(ret);
 }
 
-void Mulc::runScript(void)
+void Mulc::ScriptAPI::pushInfo(ProjectInfo *info)
 {
-    ScriptAPI::runScript(buildFilePath.string(), &projectInfo);
-    printf("comp flags: %s\n", projectInfo.compileFlags.c_str());
+    infoStack.push_back(info);
+    bindInfo(infoStack.back());
+}
+void Mulc::ScriptAPI::popInfo(void)
+{
+    infoStack.pop_back();
+    if (infoStack.size() > 0)
+        bindInfo(infoStack.back());
+    else
+        bindInfo(nullptr);
 }
 
-void Mulc::build(Mulc::Type type, std::string path)
+void Mulc::ScriptAPI::bindInfo(ProjectInfo *info)
 {
+    ScriptAPI::info = info;
+    if (info)
+    {
+        std::filesystem::current_path(info->buildFilePath.parent_path());
+    }
+    else
+    {
+        std::filesystem::current_path(initialPath);
+    }
 }
 
 void Mulc::ScriptAPI::group(std::string group = "")
@@ -182,12 +209,12 @@ void Mulc::ScriptAPI::add_source(std::string source)
         for (const auto &entry : iterator)
         {
             if (entry.path().extension() == ".cpp" || entry.path().extension() == ".c")
-                info->translationUnits.push_back({entry.path().string(), (binPath / "bin" / entry.path()).string() + ".o"});
+                info->translationUnits.push_back({entry.path().string(), ""});
         }
     }
     else
     {
-        info->translationUnits.push_back({sourcePath.string(), (binPath / "bin" / source).string() + ".o"});
+        info->translationUnits.push_back({sourcePath.string(), ""});
     }
 }
 
@@ -259,8 +286,7 @@ void Mulc::ScriptAPI::link_flag(std::string linkFlag)
 
 void Mulc::ScriptAPI::require(std::string proj)
 {
-    ProjectInfo depInfo;
-
+    ScriptAPI::runScript(proj);
 }
 
 void Mulc::ScriptAPI::export_files(std::string srcPath, std::string dstPath, bool clearDst)
@@ -312,10 +338,11 @@ void Mulc::ScriptAPI::cmd(std::string cmd)
 
 void Mulc::ScriptAPI::msg(std::string msg)
 {
+    printf(F_BOLD "[%s]: %s\n" F_RESET, info->buildFilePath.filename().string().c_str(), msg.c_str());
 }
 
-
-std::string app(std::string name) {
+std::string app(std::string name)
+{
 #if defined(_WIN32)
     return name + ".exe";
 #elif defined(__linux__)
@@ -323,7 +350,8 @@ std::string app(std::string name) {
 #endif
 }
 
-std::string lib(std::string name) {
+std::string lib(std::string name)
+{
 #if defined(_WIN32)
     return name + ".lib";
 #elif defined(__linux__)
@@ -331,7 +359,8 @@ std::string lib(std::string name) {
 #endif
 }
 
-std::string dll(std::string name) {
+std::string dll(std::string name)
+{
 #if defined(_WIN32)
     return name + ".dll";
 #elif defined(__linux__)

@@ -17,31 +17,38 @@ static void callForEach(iterable_fun f, std::list<std::string> strs)
         f(str);
 }
 
-static std::list<std::string> combine_string_string(const std::string &str1, const std::string &str2) {
+static std::list<std::string> combine_string_string(const std::string &str1, const std::string &str2)
+{
     return std::list<std::string>{str1, str2};
 }
 
-static std::list<std::string> combine_list_string(const std::list<std::string> &strs, const std::string &str) {
+static std::list<std::string> combine_list_string(const std::list<std::string> &strs, const std::string &str)
+{
     auto ret = strs;
     ret.push_back(str);
     return ret;
 }
 
-static std::list<std::string> combine_string_list(const std::string &str, const std::list<std::string> &strs) {
+static std::list<std::string> combine_string_list(const std::string &str, const std::list<std::string> &strs)
+{
     auto ret = strs;
     ret.push_front(str);
     return ret;
 }
 
-static std::list<std::string> combine_list_list(const std::list<std::string> &strs1, std::list<std::string> strs2) {
+static std::list<std::string> combine_list_list(const std::list<std::string> &strs1, std::list<std::string> strs2)
+{
     auto ret = strs1;
     ret.merge(strs2);
     return ret;
 }
 
-void Mulc::ScriptAPI::runScript(std::string script, ProjectInfo *info)
+void Mulc::ScriptAPI::runScript(std::string script)
 {
-    ScriptAPI::info = info;
+    ProjectInfo currentInfo;
+
+    currentInfo.buildFilePath = getScriptPath(script);
+    pushInfo(&currentInfo);
 
     chaiscript::ChaiScript chai;
 
@@ -95,19 +102,17 @@ void Mulc::ScriptAPI::runScript(std::string script, ProjectInfo *info)
     ADD_CHAI_FUNCTION_NAMED(chai, combine_list_list, "&");
 
     chai.add(chaiscript::const_var<std::string>(OS_NAME), "_OS");
-    chai.add(chaiscript::const_var<std::string>(mode.arch == Mode::Arch::X64 ? "x64" : mode.arch == Mode::Arch::X86 ? "x86"
-                                                                                                                    : "unknown"),
-             "_ARCH");
+    chai.add(chaiscript::const_var<std::string>(mode.arch == Mode::Arch::X64 ? "x64" : mode.arch == Mode::Arch::X86 ? "x86" : "unknown"), "_ARCH");
     chai.add(chaiscript::const_var<std::string>(mode.config == Mode::Config::RELEASE ? "release" : "debug"), "_CONFIG");
-
-    int i = 1 / 1;
 
     try
     {
-        chai.eval_file(script);
+        chai.eval_file(info->buildFilePath.filename().string());
     }
     catch (chaiscript::exception::eval_error e)
     {
         printf("reason: %s, detail: %s, what: %s\n", e.reason.c_str(), e.detail.c_str(), e.what());
     }
+
+    popInfo();
 }

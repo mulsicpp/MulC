@@ -11,13 +11,9 @@ class Mulc
 private:
     static Mode mode;
     static Flags flags;
-    static ProjectInfo projectInfo;
 
     static std::filesystem::path builderPath;
     static std::filesystem::path initialPath;
-    static std::filesystem::path buildFilePath;
-
-    static std::filesystem::path binPath;
 
 public:
     static void readArgs(int argc, char *argv[]);
@@ -32,15 +28,22 @@ private:
         DLL
     };
 
-    static void build(Type type, std::string path);
-
-private:
     class ScriptAPI
     {
     private:
         static ProjectInfo *info;
+        static std::vector<ProjectInfo *> infoStack;
+
+        static void pushInfo(ProjectInfo *info);
+        static void popInfo(void);
+        static std::filesystem::path getScriptPath(std::string path);
+
+        static void bindInfo(ProjectInfo *info);
+
+        static void build(Type type, std::string path);
+
     public:
-        static void runScript(std::string script, ProjectInfo *info);
+        static void runScript(std::string script);
 
         static void group(std::string group);
 
