@@ -271,12 +271,12 @@ void Mulc::ScriptAPI::library(std::string lib)
 void Mulc::ScriptAPI::library_path(std::string libPath)
 {
     if (addPathIfFree(info->libPaths, libPath))
-        info->compileFlags += OS_LIBRARY_PATH(libPath);
+        info->linkerFlags += OS_LIBRARY_PATH(libPath);
 }
 
 void Mulc::ScriptAPI::named_library(std::string namedLib)
 {
-    addElementIfFree(info->libs, namedLib);
+    addElementIfFree(info->libs, OS_NAMED_LIBRARY(namedLib));
 }
 
 void Mulc::ScriptAPI::link_flag(std::string linkFlag)
@@ -362,31 +362,13 @@ void Mulc::ScriptAPI::export_headers(std::string srcPath, std::string dstPath, b
     printf(F_CYAN "Exported headers from \'%s\' to \'%s\'\n" F_RESET, srcPath.c_str(), dstPath.c_str());
 }
 
-void Mulc::ScriptAPI::export_files_std(std::string srcPath, std::string dstPath) {
+void Mulc::ScriptAPI::export_files_std(std::string srcPath, std::string dstPath)
+{
     export_files(srcPath, dstPath, false);
 }
-void Mulc::ScriptAPI::export_headers_std(std::string srcPath, std::string dstPath) {
+void Mulc::ScriptAPI::export_headers_std(std::string srcPath, std::string dstPath)
+{
     export_headers(srcPath, dstPath, false);
-}
-
-void Mulc::ScriptAPI::use_dependency(std::string dependency)
-{
-}
-
-void Mulc::ScriptAPI::dep_include_path(std::string includePath)
-{
-}
-
-void Mulc::ScriptAPI::dep_library(std::string lib)
-{
-}
-
-void Mulc::ScriptAPI::dep_library_path(std::string libPath)
-{
-}
-
-void Mulc::ScriptAPI::dep_named_library(std::string namedLib)
-{
 }
 
 void Mulc::ScriptAPI::build_app(std::string path)
@@ -406,6 +388,9 @@ void Mulc::ScriptAPI::build_dll(std::string path)
 
 void Mulc::ScriptAPI::cmd(std::string cmd)
 {
+    printf("Running command " F_BLUE "%s" F_RESET ":\n\n", cmd.c_str());
+    int ret = system(cmd.c_str());
+    printf("\nCommand returned with %i\n", ret);
 }
 
 void Mulc::ScriptAPI::msg(std::string msg)

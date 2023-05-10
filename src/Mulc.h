@@ -68,13 +68,6 @@ private:
         static void export_files_std(std::string srcPath, std::string dstPath);
         static void export_headers_std(std::string srcPath, std::string dstPath);
 
-        static void use_dependency(std::string dependency);
-
-        static void dep_include_path(std::string includePath);
-        static void dep_library(std::string lib);
-        static void dep_library_path(std::string libPath);
-        static void dep_named_library(std::string namedLib);
-
         static void build_app(std::string path);
         static void build_lib(std::string path);
         static void build_dll(std::string path);

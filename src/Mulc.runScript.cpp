@@ -66,11 +66,6 @@ void Mulc::ScriptAPI::runScript(std::string script)
     ADD_CHAI_FUNCTION(chai, require);
     ADD_CHAI_FUNCTION(chai, export_files);
     ADD_CHAI_FUNCTION(chai, export_headers);
-    ADD_CHAI_FUNCTION(chai, use_dependency);
-    ADD_CHAI_FUNCTION(chai, dep_include_path);
-    ADD_CHAI_FUNCTION(chai, dep_library);
-    ADD_CHAI_FUNCTION(chai, dep_library_path);
-    ADD_CHAI_FUNCTION(chai, dep_named_library);
     ADD_CHAI_FUNCTION(chai, build_app);
     ADD_CHAI_FUNCTION(chai, build_lib);
     ADD_CHAI_FUNCTION(chai, build_dll);
@@ -88,11 +83,6 @@ void Mulc::ScriptAPI::runScript(std::string script)
     ADD_CHAI_FUNCTION_MULTI(chai, named_library);
     ADD_CHAI_FUNCTION_MULTI(chai, link_flag);
     ADD_CHAI_FUNCTION_MULTI(chai, require);
-    ADD_CHAI_FUNCTION_MULTI(chai, use_dependency);
-    ADD_CHAI_FUNCTION_MULTI(chai, dep_include_path);
-    ADD_CHAI_FUNCTION_MULTI(chai, dep_library);
-    ADD_CHAI_FUNCTION_MULTI(chai, dep_library_path);
-    ADD_CHAI_FUNCTION_MULTI(chai, dep_named_library);
     ADD_CHAI_FUNCTION_MULTI(chai, cmd);
     ADD_CHAI_FUNCTION_MULTI(chai, msg);
 
