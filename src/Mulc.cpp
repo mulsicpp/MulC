@@ -10,6 +10,8 @@
 #include "Mulc.h"
 #include "utils.h"
 
+#include "ScopePath.h"
+
 #include <stdio.h>
 
 #define EXISTS std::filesystem::exists
@@ -17,6 +19,7 @@
 
 Mode Mulc::mode;
 Flags Mulc::flags;
+SystemInterface Mulc::systemInterface;
 
 std::filesystem::path Mulc::builderPath = "";
 std::filesystem::path Mulc::initialPath = "";
@@ -116,6 +119,8 @@ void Mulc::init(void)
     ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
 #endif
     builderPath = std::filesystem::canonical(std::filesystem::path(result).parent_path());
+
+    setupMSVC();
 }
 
 void Mulc::runScript(void)
@@ -184,6 +189,166 @@ void Mulc::ScriptAPI::bindInfo(ProjectInfo *info)
     else
     {
         std::filesystem::current_path(initialPath);
+    }
+}
+
+bool Mulc::findVcVarsAuto(SystemInterface::MSVCInfo *info)
+{
+    ScopePath p(initialPath);
+    FILE *cmd;
+    if ((cmd = _popen("set", "r")) == nullptr)
+        return false;
+
+    char buffer[8000];
+
+    std::filesystem::path appdata, programfilesx64, programfilesx86;
+
+    while (fgets(buffer, 8000, cmd))
+    {
+        if (buffer[strlen(buffer) - 1] == '\n')
+            buffer[strlen(buffer) - 1] = 0;
+        std::string line(buffer);
+
+        int offset = 0;
+        if ((offset = line.find('=')) != std::string::npos)
+        {
+            if (line.substr(0, offset) == "APPDATA")
+                appdata = line.substr(offset + 1);
+            else if (line.substr(0, offset) == "ProgramFiles")
+                programfilesx64 = line.substr(offset + 1);
+            else if (line.substr(0, offset) == "ProgramFiles(x86)")
+                programfilesx86 = line.substr(offset + 1);
+        }
+    }
+
+    std::filesystem::path vcvarsPath;
+
+    if (EXISTS(programfilesx64 / "Microsoft Visual Studio"))
+        vcvarsPath = programfilesx64 / "Microsoft Visual Studio";
+    else if (EXISTS(programfilesx86 / "Microsoft Visual Studio"))
+        vcvarsPath = programfilesx86 / "Microsoft Visual Studio";
+    else if (EXISTS(appdata / "Microsoft Visual Studio"))
+        vcvarsPath = appdata / "Microsoft Visual Studio";
+    else
+        return false;
+
+    std::filesystem::directory_iterator it(vcvarsPath);
+    for (const auto entry : it)
+        if (entry.exists())
+            vcvarsPath = entry.path();
+
+    it = std::filesystem::directory_iterator(vcvarsPath);
+    for (const auto entry : it)
+        if (entry.exists())
+            vcvarsPath = entry.path();
+
+    vcvarsPath = vcvarsPath / "VC" / "Auxiliary" / "Build";
+    if (EXISTS(vcvarsPath / "vcvars32.bat") && EXISTS(vcvarsPath / "vcvars64.bat"))
+    {
+        return createMSVCBuildInfo(info, vcvarsPath);
+    }
+    return false;
+}
+
+bool Mulc::findVcVarsInput(SystemInterface::MSVCInfo *info)
+{
+    ScopePath p(initialPath);
+    return false;
+}
+
+static std::vector<std::string> split(const std::string &str, char separator)
+{
+    int startIndex = 0, endIndex = 0;
+    std::vector<std::string> strings;
+
+    for (int i = 0; i <= str.size(); i++)
+    {
+        // If we reached the end of the word or the end of the input.
+        if (str[i] == separator || i == str.size())
+        {
+            endIndex = i;
+            std::string temp;
+            temp.append(str, startIndex, endIndex - startIndex);
+            strings.push_back(temp);
+            startIndex = endIndex + 1;
+        }
+    }
+    return strings;
+}
+
+bool Mulc::createMSVCBuildInfo(SystemInterface::MSVCInfo *info, std::filesystem::path path)
+{
+    ScopePath p(builderPath);
+    FILE *cmd;
+    if ((cmd = _popen((std::string("\"") + (path / (std::string("vcvars") + (mode.arch == Mode::Arch::X64 ? "64" : "32") + ".bat")).string() + "\" && SET").c_str(), "r")) == nullptr)
+    {
+        return false;
+    }
+
+    char buffer[8000];
+
+    std::string
+        env_VCToolsInstallDir,
+        env_VSCMD_ARG_HOST_ARCH,
+        env_VSCMD_ARG_TGT_ARCH,
+        env_INCLUDE,
+        env_LIB;
+
+    while (fgets(buffer, 8000, cmd))
+    {
+        if (buffer[strlen(buffer) - 1] == '\n')
+            buffer[strlen(buffer) - 1] = 0;
+        std::string line(buffer);
+
+        std::string name;
+
+        int offset = 0;
+        if ((offset = line.find('=')) != std::string::npos)
+        {
+            name = line.substr(0, offset);
+            if (name == "VCToolsInstallDir")
+                env_VCToolsInstallDir = line.substr(offset + 1);
+            else if (name == "VSCMD_ARG_HOST_ARCH")
+                env_VSCMD_ARG_HOST_ARCH = line.substr(offset + 1);
+            else if (name == "VSCMD_ARG_TGT_ARCH")
+                env_VSCMD_ARG_TGT_ARCH = line.substr(offset + 1);
+            else if (name == "INCLUDE")
+                env_INCLUDE = line.substr(offset + 1);
+            else if (name == "LIB")
+                env_LIB = line.substr(offset + 1);
+        }
+    }
+
+    systemInterface.msvcInfo.compilerPath = (std::filesystem::path(env_VCToolsInstallDir) / "bin" / ("Host" + env_VSCMD_ARG_HOST_ARCH) / env_VSCMD_ARG_TGT_ARCH).string();
+
+    for (const auto &include : split(env_INCLUDE, ';'))
+        systemInterface.msvcInfo.systemIncludePaths += OS_INCLUDE_PATH(std::filesystem::canonical(include).string());
+
+    for (const auto &lib : split(env_LIB, ';'))
+    {
+        systemInterface.msvcInfo.systemLibPaths += OS_LIBRARY_PATH(std::filesystem::canonical(lib).string());
+    }
+
+    FILE *setup = fopen((mode.arch == Mode::Arch::X64 ? "msvcSetupx64" : "msvcSetupx86"), "w");
+
+    if (setup)
+    {
+        fprintf(setup, "%s\n%s\n%s\n", systemInterface.msvcInfo.compilerPath.c_str(), systemInterface.msvcInfo.systemIncludePaths.c_str(), systemInterface.msvcInfo.systemLibPaths.c_str());
+        fclose(setup);
+    }
+    /**/
+
+    return true;
+}
+
+void Mulc::setupMSVC(void)
+{
+    printf("Setting up compiler ...\n");
+    if (!findVcVarsAuto(&systemInterface.msvcInfo))
+    {
+        printf("MSVC could not be found automatially\n");
+        if (!findVcVarsInput(&systemInterface.msvcInfo))
+            error("MSVC not found");
     }
 }
 

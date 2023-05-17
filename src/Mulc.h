@@ -4,6 +4,8 @@
 #include "Flags.h"
 #include "ProjectInfo.h"
 
+#include "SystemInterface.h"
+
 #include <filesystem>
 
 class Mulc
@@ -11,6 +13,7 @@ class Mulc
 private:
     static Mode mode;
     static Flags flags;
+    static SystemInterface systemInterface;
 
     static std::filesystem::path builderPath;
     static std::filesystem::path initialPath;
@@ -19,6 +22,13 @@ public:
     static void readArgs(int argc, char *argv[]);
     static void init(void);
     static void runScript(void);
+
+private:
+    static bool findVcVarsAuto(SystemInterface::MSVCInfo *info);
+    static bool findVcVarsInput(SystemInterface::MSVCInfo *info);
+    static bool createMSVCBuildInfo(SystemInterface::MSVCInfo *info, std::filesystem::path path);
+
+    static void setupMSVC(void);
 
 private:
     enum class Type
