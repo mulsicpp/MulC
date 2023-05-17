@@ -53,6 +53,10 @@ struct Flags
 
     std::string group = "";
 
+    bool msvcSetup;
+
+    std::string msvcSetupPath = "";
+
     enum class Action
     {
         BUILD,
@@ -61,29 +65,32 @@ struct Flags
 
     std::unordered_map<std::string, std::string> vars;
 
-    std::stringstream childFlags;
-
     std::vector<Flag> flags = {
         Flag({"--run", "-r"}, [this](void)
              { this->run = true; }),
         Flag({"--force", "-f"}, [this](void)
-             { this->force = true; childFlags << "--force "; }),
+             { this->force = true; }),
 
         Flag({"--path", "-p"}, [this](char *s)
              { this->path = s; }),
 
         Flag({"--arch", "-a"}, [this](char *s)
              { 
-                if (strcmp(s, "x64") == 0) this->arch = Mode::Arch::X64; else if (strcmp(s, "x86") == 0) this->arch = Mode::Arch::X86; else error("The architecture \'%s\' is unknown", s); childFlags << "--arch " << s << " "; }),
+                if (strcmp(s, "x64") == 0) this->arch = Mode::Arch::X64; else if (strcmp(s, "x86") == 0) this->arch = Mode::Arch::X86; else error("The architecture \'%s\' is unknown", s); }),
         Flag({"--config", "-c"}, [this](char *s)
-             { if (strcmp(s, "release") == 0) this->config = Mode::Config::RELEASE; else if (strcmp(s, "debug") == 0) this->config = Mode::Config::DEBUG; else error("The configuration \'%s\' is unknown", s); childFlags << "--config " << s << " "; }),
+             { if (strcmp(s, "release") == 0) this->config = Mode::Config::RELEASE; else if (strcmp(s, "debug") == 0) this->config = Mode::Config::DEBUG; else error("The configuration \'%s\' is unknown", s); }),
 
         Flag({"--var", "-v"}, [this](char *name)
              {
-            childFlags << "--var " << std::quoted(name) << " ";
             char *value = strchr(name, '=');
             *value++ = 0;
             vars[name] = value; }),
         Flag({"--group", "-g"}, [this](char *s)
-             { this->group = s; })};
+             { this->group = s; }),
+        Flag({"--msvc-setup"}, [this](void)
+             { this->msvcSetup = true; }),
+        Flag({"--msvc-setup-from"}, [this](char *s)
+             { 
+                this->msvcSetup = true;
+                this->msvcSetupPath = s; })};
 };

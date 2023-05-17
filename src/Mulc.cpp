@@ -357,15 +357,21 @@ void Mulc::setupMSVC(void)
 {
     ScopePath p(builderPath);
 
-    if (!EXISTS(mode.arch == Mode::Arch::X64 ? "msvcSetupx64" : "msvcSetupx86"))
+    if (!EXISTS(mode.arch == Mode::Arch::X64 ? "msvcSetupx64" : "msvcSetupx86") || flags.msvcSetup)
     {
+        ScopePath p2(initialPath);
         printf("Setting up compiler ...\n");
-        if (!findVcVarsAuto(&systemInterface.msvcInfo))
+        if (flags.msvcSetupPath.size() == 0)
         {
-            printf("MSVC could not be found automatially\n");
-            if (!findVcVarsInput(&systemInterface.msvcInfo))
-                error("MSVC not found");
+            if (!findVcVarsAuto(&systemInterface.msvcInfo))
+            {
+                printf("MSVC could not be found automatially\n");
+                if (!findVcVarsInput(&systemInterface.msvcInfo))
+                    error("MSVC not found");
+            }
         }
+        else if (!createMSVCBuildInfo(&systemInterface.msvcInfo, std::filesystem::canonical(flags.msvcSetupPath)))
+                    error("MSVC not found");
     }
     else
     {
@@ -388,7 +394,7 @@ void Mulc::setupMSVC(void)
             fclose(setup);
         }
     }
-    //printf("%s\n%s\n%s\n", systemInterface.msvcInfo.compilerPath.c_str(), systemInterface.msvcInfo.systemIncludePaths.c_str(), systemInterface.msvcInfo.systemLibPaths.c_str());
+    // printf("%s\n%s\n%s\n", systemInterface.msvcInfo.compilerPath.c_str(), systemInterface.msvcInfo.systemIncludePaths.c_str(), systemInterface.msvcInfo.systemLibPaths.c_str());
 }
 
 void Mulc::ScriptAPI::group(std::string group = "")
