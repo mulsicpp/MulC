@@ -243,17 +243,23 @@ bool Mulc::findVcVarsAuto(SystemInterface::MSVCInfo *info)
             vcvarsPath = entry.path();
 
     vcvarsPath = vcvarsPath / "VC" / "Auxiliary" / "Build";
-    if (EXISTS(vcvarsPath / "vcvars32.bat") && EXISTS(vcvarsPath / "vcvars64.bat"))
-    {
-        return createMSVCBuildInfo(info, vcvarsPath);
-    }
-    return false;
+
+    return createMSVCBuildInfo(info, vcvarsPath);
 }
 
 bool Mulc::findVcVarsInput(SystemInterface::MSVCInfo *info)
 {
     ScopePath p(initialPath);
-    return false;
+
+    char buffer[1024];
+    printf("Please enter the folder containing the vcvars%s.bat script: ", mode.arch == Mode::Arch::X64 ? "64" : "86");
+    if (!fgets(buffer, 1024, stdin))
+        return false;
+
+    if (buffer[strlen(buffer) - 1] == '\n')
+        buffer[strlen(buffer) - 1] = 0;
+
+    return createMSVCBuildInfo(info, std::filesystem::canonical(buffer));
 }
 
 static std::vector<std::string> split(const std::string &str, char separator)
@@ -279,6 +285,9 @@ static std::vector<std::string> split(const std::string &str, char separator)
 bool Mulc::createMSVCBuildInfo(SystemInterface::MSVCInfo *info, std::filesystem::path path)
 {
     ScopePath p(builderPath);
+
+    if (!EXISTS(path / (mode.arch == Mode::Arch::X64 ? "vcvars64.bat" : "vcvars32.bat")))
+        return false;
     FILE *cmd;
     if ((cmd = _popen((std::string("\"") + (path / (std::string("vcvars") + (mode.arch == Mode::Arch::X64 ? "64" : "32") + ".bat")).string() + "\" && SET").c_str(), "r")) == nullptr)
     {
@@ -319,6 +328,9 @@ bool Mulc::createMSVCBuildInfo(SystemInterface::MSVCInfo *info, std::filesystem:
         }
     }
 
+    if (_pclose(cmd) != 0)
+        return false;
+
     systemInterface.msvcInfo.compilerPath = (std::filesystem::path(env_VCToolsInstallDir) / "bin" / ("Host" + env_VSCMD_ARG_HOST_ARCH) / env_VSCMD_ARG_TGT_ARCH).string();
 
     for (const auto &include : split(env_INCLUDE, ';'))
@@ -343,13 +355,40 @@ bool Mulc::createMSVCBuildInfo(SystemInterface::MSVCInfo *info, std::filesystem:
 
 void Mulc::setupMSVC(void)
 {
-    printf("Setting up compiler ...\n");
-    if (!findVcVarsAuto(&systemInterface.msvcInfo))
+    ScopePath p(builderPath);
+
+    if (!EXISTS(mode.arch == Mode::Arch::X64 ? "msvcSetupx64" : "msvcSetupx86"))
     {
-        printf("MSVC could not be found automatially\n");
-        if (!findVcVarsInput(&systemInterface.msvcInfo))
-            error("MSVC not found");
+        printf("Setting up compiler ...\n");
+        if (!findVcVarsAuto(&systemInterface.msvcInfo))
+        {
+            printf("MSVC could not be found automatially\n");
+            if (!findVcVarsInput(&systemInterface.msvcInfo))
+                error("MSVC not found");
+        }
     }
+    else
+    {
+        FILE *setup = fopen((mode.arch == Mode::Arch::X64 ? "msvcSetupx64" : "msvcSetupx86"), "r");
+
+        if (setup)
+        {
+            char buffer[3][8000];
+            for (int i = 0; i < 3; i++)
+            {
+                fgets(buffer[i], 8000, setup);
+                if (buffer[i][strlen(buffer[i]) - 1] == '\n')
+                    buffer[i][strlen(buffer[i]) - 1] = 0;
+            }
+
+            systemInterface.msvcInfo.compilerPath = buffer[0];
+            systemInterface.msvcInfo.systemIncludePaths = buffer[1];
+            systemInterface.msvcInfo.systemLibPaths = buffer[2];
+
+            fclose(setup);
+        }
+    }
+    //printf("%s\n%s\n%s\n", systemInterface.msvcInfo.compilerPath.c_str(), systemInterface.msvcInfo.systemIncludePaths.c_str(), systemInterface.msvcInfo.systemLibPaths.c_str());
 }
 
 void Mulc::ScriptAPI::group(std::string group = "")
