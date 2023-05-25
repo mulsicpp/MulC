@@ -153,7 +153,7 @@ int SystemInterface::compile(const ProjectInfo::TranslationUnit &tu, ProjectInfo
 
     if (!pipe)
     {
-        return ERROR_CODE;
+        error("Could not call compiler command");
     }
 
     for (int i = 0; i < 3; i++)
@@ -281,7 +281,7 @@ int SystemInterface::linkApp(ProjectInfo *buildInfo, Mode mode, std::string path
 #endif
     if (!pipe)
     {
-        return ERROR_CODE;
+        error("Could not call compiler command");
     }
 
 #if defined(_WIN32)
@@ -317,7 +317,7 @@ int SystemInterface::createLib(ProjectInfo *buildInfo, Mode mode, std::string pa
 #endif
     if (!pipe)
     {
-        return ERROR_CODE;
+        error("Could not call compiler command");
     }
 
 #if defined(_WIN32)
@@ -358,7 +358,7 @@ int SystemInterface::linkDll(ProjectInfo *buildInfo, Mode mode, std::string path
 #endif
     if (!pipe)
     {
-        return ERROR_CODE;
+        error("Could not call compiler command");
     }
 
 #if defined(_WIN32)
