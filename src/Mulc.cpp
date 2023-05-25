@@ -19,6 +19,8 @@
 #define EXISTS std::filesystem::exists
 #define MOD_TIME std::filesystem::last_write_time
 
+#define OS_PATH(x) std::filesystem::path(x).make_preferred()
+
 Mode Mulc::mode;
 Flags Mulc::flags;
 SystemInterface Mulc::systemInterface;
@@ -640,7 +642,7 @@ void Mulc::ScriptAPI::add_source(std::string source)
     }
     else
     {
-        info->translationUnits.push_back({sourcePath.string()});
+        info->translationUnits.push_back({OS_PATH(sourcePath).string()});
     }
 }
 
@@ -676,7 +678,7 @@ void Mulc::ScriptAPI::std(std::string std)
 void Mulc::ScriptAPI::include_path(std::string includePath)
 {
     if (addPathIfFree(info->includePaths, includePath))
-        info->compileFlags += OS_INCLUDE_PATH(includePath);
+        info->compileFlags += OS_INCLUDE_PATH(OS_PATH(includePath).string());
 }
 
 void Mulc::ScriptAPI::define(std::string macro)
@@ -697,7 +699,7 @@ void Mulc::ScriptAPI::library(std::string lib)
 void Mulc::ScriptAPI::library_path(std::string libPath)
 {
     if (addPathIfFree(info->libPaths, libPath))
-        info->linkerFlags += OS_LIBRARY_PATH(libPath);
+        info->linkerFlags += OS_LIBRARY_PATH(OS_PATH(libPath).string());
 }
 
 void Mulc::ScriptAPI::named_library(std::string namedLib)
