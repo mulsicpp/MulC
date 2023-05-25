@@ -24,10 +24,11 @@ public:
     static void runScript(void);
 
 private:
+#if defined(_WIN32)
     static bool findVcVarsAuto(SystemInterface::MSVCInfo *info);
     static bool findVcVarsInput(SystemInterface::MSVCInfo *info);
     static bool createMSVCBuildInfo(SystemInterface::MSVCInfo *info, std::filesystem::path path);
-
+#endif
     static void setupMSVC(void);
 
 private:
@@ -51,6 +52,16 @@ private:
         static void bindInfo(ProjectInfo *info);
 
         static void build(Type type, std::string path);
+
+        static std::string generateCompileFootprint(void);
+
+        static std::string loadCompileFootprint(void);
+        static void saveCompileFootprint(std::string footprint);
+
+        static void loadHeaderDependencies(void);
+        static void saveHeaderDependencies(void);
+
+        static bool tuNeedsUpdate(ProjectInfo::TranslationUnit tu);
 
     public:
         static void runScript(std::string script);

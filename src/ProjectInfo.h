@@ -7,14 +7,11 @@
 
 struct ProjectInfo
 {
-    std::string group;
-
-    struct TranslationUnit
-    {
+    struct TranslationUnit {
         std::string cFilePath;
         std::string oFilePath;
     };
-
+    
     std::vector<TranslationUnit> translationUnits;
 
     std::string compileFlags;
@@ -29,5 +26,5 @@ struct ProjectInfo
 
     std::filesystem::path buildFilePath;
 
-    std::filesystem::path binPath;
+    std::filesystem::path buildDir = std::filesystem::path("mulc.build") / "default";
 };

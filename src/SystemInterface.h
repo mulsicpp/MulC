@@ -12,7 +12,7 @@ struct SystemInterface
         std::string systemLibPaths = "";
     } msvcInfo;
 
-    int compile(ProjectInfo::TranslationUnit tu, ProjectInfo *buildInfo, Mode mode, std::string *output);
+    int compile(const ProjectInfo::TranslationUnit &tu, ProjectInfo *buildInfo, Mode mode, std::string *output);
 
     int linkApp(ProjectInfo *buildInfo, Mode mode, std::string path, std::string *output);
 

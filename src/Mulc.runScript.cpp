@@ -72,6 +72,10 @@ void Mulc::ScriptAPI::runScript(std::string script)
     ADD_CHAI_FUNCTION(chai, cmd);
     ADD_CHAI_FUNCTION(chai, msg);
 
+    ADD_CHAI_FUNCTION(chai, app);
+    ADD_CHAI_FUNCTION(chai, lib);
+    ADD_CHAI_FUNCTION(chai, dll);
+
     ADD_CHAI_FUNCTION_MULTI(chai, add_source);
     ADD_CHAI_FUNCTION_MULTI(chai, remove_source);
     ADD_CHAI_FUNCTION_MULTI(chai, std);

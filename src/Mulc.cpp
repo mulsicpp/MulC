@@ -14,6 +14,8 @@
 
 #include <stdio.h>
 
+#include <fstream>
+
 #define EXISTS std::filesystem::exists
 #define MOD_TIME std::filesystem::last_write_time
 
@@ -128,8 +130,213 @@ void Mulc::runScript(void)
     ScriptAPI::runScript(flags.path);
 }
 
-void Mulc::ScriptAPI::build(Mulc::Type type, std::string path)
+void Mulc::ScriptAPI::build(Mulc::Type type, std::string name)
 {
+    std::filesystem::create_directories(info->buildDir);
+
+    std::string footprint = generateCompileFootprint();
+
+    bool globalUpdate = flags.force || (footprint != loadCompileFootprint());
+
+    if (globalUpdate && EXISTS(info->buildDir / "bin"))
+        std::filesystem::remove_all(info->buildDir / "bin");
+
+    loadHeaderDependencies();
+
+    using BType = Mulc::Type;
+
+    std::string output;
+
+    // compilation
+    for (auto &tu : info->translationUnits)
+    {
+        tu.oFilePath = (info->buildDir / "bin" / tu.cFilePath).string() + ".o";
+        printf(F_BOLD "%s" F_RESET, tu.cFilePath.c_str());
+        if (globalUpdate || tuNeedsUpdate(tu))
+        {
+            std::filesystem::create_directories(std::filesystem::path(tu.oFilePath).parent_path());
+            printf("\n");
+            if (systemInterface.compile(tu, info, mode, &output) == ERROR_CODE)
+            {
+                printf("%s", output.c_str());
+                saveHeaderDependencies();
+                error(F_BOLD "COMPILATION FAILED");
+            }
+            else
+            {
+                printf("\033[F\'%s\'" F_GREEN F_BOLD " SUCCESS\n" F_RESET, tu.cFilePath.c_str());
+                printf("%s", output.c_str());
+            }
+        }
+        else
+        {
+            printf(F_YELLOW F_BOLD " UP TO DATE\n" F_RESET);
+        }
+    }
+
+    // linking
+    std::string path = (info->buildDir / (type == Type::APP ? "out" : "lib") / (type == Type::APP ? app(name) : type == Type::LIB ? lib(name)
+                                                                                                                                  : dll(name)))
+                           .string();
+
+    std::filesystem::create_directories(std::filesystem::path(path).parent_path());
+
+    output = "";
+
+    switch (type)
+    {
+    case BType::APP:
+        printf(F_BOLD "Creating application \'%s\'\n" F_RESET, path.c_str());
+        if (systemInterface.linkApp(info, mode, path, &output) == ERROR_CODE)
+        {
+            printf("%s", output.c_str());
+            error(F_BOLD "Creation of \'%s\' failed" F_RESET, path.c_str());
+        }
+        else
+        {
+            printf(F_BOLD "\033[FCreating application \'%s\'" F_GREEN F_BOLD " SUCCESS\n\n" F_RESET, path.c_str());
+        }
+        break;
+    case BType::LIB:
+        printf(F_BOLD "Creating static library \'%s\'\n" F_RESET, path.c_str());
+        if (systemInterface.createLib(info, mode, path, &output) == ERROR_CODE)
+        {
+            printf("%s", output.c_str());
+            error(F_BOLD "Creation of \'%s\' failed" F_RESET, path.c_str());
+        }
+        else
+        {
+            printf(F_BOLD "\033[FCreating static library \'%s\'" F_GREEN F_BOLD " SUCCESS\n\n" F_RESET, path.c_str());
+        }
+        break;
+    case BType::DLL:
+        printf(F_BOLD "Creating dynamic library \'%s\'\n" F_RESET, path.c_str());
+        if (systemInterface.linkDll(info, mode, path, &output) == ERROR_CODE)
+        {
+            printf("%s", output.c_str());
+            error(F_BOLD "Creation of \'%s\' failed" F_RESET, path.c_str());
+        }
+        else
+        {
+            printf(F_BOLD "\033[FCreating dynamic library \'%s\'" F_GREEN F_BOLD " SUCCESS\n\n" F_RESET, path.c_str());
+        }
+        break;
+    }
+
+    printf("%s", output.c_str());
+
+    saveCompileFootprint(footprint);
+
+    saveHeaderDependencies();
+
+    if (type == BType::APP && flags.run)
+    {
+        printf(F_BOLD "Running \'%s\' ..." F_RESET "\n", path.c_str());
+        int ret = systemInterface.executeProgram(path.c_str(), NULL);
+        printf(F_BOLD "Application terminated with %i\n" F_RESET, ret);
+    }
+}
+
+std::string Mulc::ScriptAPI::generateCompileFootprint(void)
+{
+    return std::string(mode.os == Mode::Os::WINDOWS ? "windows" : "linux") + "/" + (mode.arch == Mode::Arch::X64 ? "x64" : "x86") + "/" + (mode.config == Mode::Config::RELEASE ? "release" : "debug") + " " + info->compileFlags;
+}
+
+std::string Mulc::ScriptAPI::loadCompileFootprint(void)
+{
+    if (!EXISTS(info->buildDir / "compile_footprint"))
+        return "";
+    FILE *file = fopen((info->buildDir / "compile_footprint").string().c_str(), "r");
+    if (file)
+    {
+        fseek(file, 0, SEEK_END);
+        int length = ftell(file);
+        fseek(file, 0, SEEK_SET);
+
+        char *buffer = new char[length + 1];
+        fread(buffer, 1, length, file);
+        buffer[length] = 0;
+
+        fclose(file);
+
+        std::string ret = buffer;
+
+        delete[] buffer;
+
+        return ret;
+    }
+    return "";
+}
+
+void Mulc::ScriptAPI::saveCompileFootprint(std::string footprint)
+{
+    FILE *file = fopen((info->buildDir / "compile_footprint").string().c_str(), "w");
+    if (file)
+    {
+        fputs(footprint.c_str(), file);
+
+        fclose(file);
+    }
+}
+
+void Mulc::ScriptAPI::loadHeaderDependencies(void)
+{
+    if (std::filesystem::exists(info->buildDir / "header_dep"))
+    {
+        std::ifstream in((info->buildDir / "header_dep").string());
+
+        std::string line, src, header;
+        std::vector<std::string> headers;
+
+        while (std::getline(in, line))
+        {
+            std::stringstream ss(line);
+            headers.clear();
+            std::getline(ss, src, ':');
+            while (std::getline(ss, header, ';'))
+            {
+                if (header.length() > 0)
+                {
+                    headers.push_back(header);
+                }
+            }
+            info->headerDependencies[src] = headers;
+        }
+        in.close();
+    }
+}
+
+void Mulc::ScriptAPI::saveHeaderDependencies(void)
+{
+    std::ofstream out((info->buildDir / "header_dep").string());
+
+    for (const auto &[key, value] : info->headerDependencies)
+    {
+        out << key << ":";
+        for (const std::string &header : value)
+            out << header << ";";
+        out << std::endl;
+    }
+    out.close();
+}
+
+bool Mulc::ScriptAPI::tuNeedsUpdate(ProjectInfo::TranslationUnit tu)
+{
+    if (!EXISTS(tu.oFilePath) || MOD_TIME(tu.cFilePath) > MOD_TIME(tu.oFilePath))
+        return true;
+
+    if (info->headerDependencies.find(tu.cFilePath) == info->headerDependencies.end())
+        return true;
+
+    const auto &header_Deps = info->headerDependencies[tu.cFilePath];
+    for (int i = 0; i < header_Deps.size(); i++)
+    {
+        if (!EXISTS(header_Deps[i]))
+            continue;
+        if (MOD_TIME(header_Deps[i]) > MOD_TIME(tu.oFilePath))
+            return true;
+    }
+    return false;
 }
 
 std::filesystem::path Mulc::ScriptAPI::getScriptPath(std::string path)
@@ -192,6 +399,7 @@ void Mulc::ScriptAPI::bindInfo(ProjectInfo *info)
     }
 }
 
+#if defined(_WIN32)
 bool Mulc::findVcVarsAuto(SystemInterface::MSVCInfo *info)
 {
     ScopePath p(initialPath);
@@ -371,7 +579,7 @@ void Mulc::setupMSVC(void)
             }
         }
         else if (!createMSVCBuildInfo(&systemInterface.msvcInfo, std::filesystem::canonical(flags.msvcSetupPath)))
-                    error("MSVC not found");
+            error("MSVC not found");
     }
     else
     {
@@ -397,10 +605,18 @@ void Mulc::setupMSVC(void)
     // printf("%s\n%s\n%s\n", systemInterface.msvcInfo.compilerPath.c_str(), systemInterface.msvcInfo.systemIncludePaths.c_str(), systemInterface.msvcInfo.systemLibPaths.c_str());
 }
 
+#else
+void Mulc::setupMSVC(void)
+{
+}
+#endif
+
 void Mulc::ScriptAPI::group(std::string group = "")
 {
     if (group.size() > 0)
-        info->group = group;
+        info->buildDir = std::filesystem::path("mulc.build") / group;
+    else
+        info->buildDir = std::filesystem::path("mulc.build") / "default";
 }
 
 void Mulc::ScriptAPI::add_source(std::string source)
@@ -419,12 +635,12 @@ void Mulc::ScriptAPI::add_source(std::string source)
         for (const auto &entry : iterator)
         {
             if (entry.path().extension() == ".cpp" || entry.path().extension() == ".c")
-                info->translationUnits.push_back({entry.path().string(), ""});
+                info->translationUnits.push_back({entry.path().string()});
         }
     }
     else
     {
-        info->translationUnits.push_back({sourcePath.string(), ""});
+        info->translationUnits.push_back({sourcePath.string()});
     }
 }
 
@@ -581,19 +797,19 @@ void Mulc::ScriptAPI::export_headers_std(std::string srcPath, std::string dstPat
     export_headers(srcPath, dstPath, false);
 }
 
-void Mulc::ScriptAPI::build_app(std::string path)
+void Mulc::ScriptAPI::build_app(std::string name)
 {
-    build(Type::APP, path);
+    build(Type::APP, name);
 }
 
-void Mulc::ScriptAPI::build_lib(std::string path)
+void Mulc::ScriptAPI::build_lib(std::string name)
 {
-    build(Type::LIB, path);
+    build(Type::LIB, name);
 }
 
-void Mulc::ScriptAPI::build_dll(std::string path)
+void Mulc::ScriptAPI::build_dll(std::string name)
 {
-    build(Type::DLL, path);
+    build(Type::DLL, name);
 }
 
 void Mulc::ScriptAPI::cmd(std::string cmd)
@@ -608,7 +824,7 @@ void Mulc::ScriptAPI::msg(std::string msg)
     printf(F_BOLD "[%s]: %s\n" F_RESET, info->buildFilePath.filename().string().c_str(), msg.c_str());
 }
 
-std::string app(std::string name)
+std::string Mulc::ScriptAPI::app(std::string name)
 {
 #if defined(_WIN32)
     return name + ".exe";
@@ -617,7 +833,7 @@ std::string app(std::string name)
 #endif
 }
 
-std::string lib(std::string name)
+std::string Mulc::ScriptAPI::lib(std::string name)
 {
 #if defined(_WIN32)
     return name + ".lib";
@@ -626,7 +842,7 @@ std::string lib(std::string name)
 #endif
 }
 
-std::string dll(std::string name)
+std::string Mulc::ScriptAPI::dll(std::string name)
 {
 #if defined(_WIN32)
     return name + ".dll";

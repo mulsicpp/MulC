@@ -130,7 +130,7 @@ static std::string &trim(std::string &str)
     return str;
 }
 
-int SystemInterface::compile(ProjectInfo::TranslationUnit tu, ProjectInfo *buildInfo, Mode mode, std::string *output)
+int SystemInterface::compile(const ProjectInfo::TranslationUnit &tu, ProjectInfo *buildInfo, Mode mode, std::string *output)
 {
     char buffer[1024];
 
@@ -274,7 +274,7 @@ int SystemInterface::linkApp(ProjectInfo *buildInfo, Mode mode, std::string path
     HANDLE out;
     PROCESS_INFORMATION pi;
     std::string prog = msvcInfo.compilerPath + "\\link.exe";
-    std::string args = std::string(mode.config == Config::DEBUG ? " /DEBUG:FASTLINK " : " ") + "/out:\"" + path + "\" " + oFiles + libStr + buildInfo->linkerFlags + msvcInfo.systemLibPaths;
+    std::string args = std::string(mode.config == Config::DEBUG ? " /DEBUG:FASTLINK " : " ") + "/out:\"" + path + "\" " + oFiles + buildInfo->linkerFlags  + libStr + msvcInfo.systemLibPaths;
     FILE *pipe = win_popen(prog.c_str(), args.c_str(), &out, &pi);
 #elif defined(__linux__)
     FILE *pipe = popen(("g++ -march=x86-64 " + std::string(mode.arch == Arch::X86 ? "-m32 " : "-m64 ") + "-o \"" + path + "\" " + oFiles + "-Wl,--start-group " + buildInfo->linkerFlags + libStr + " -Wl,--end-group 2>&1").c_str(), "r");
@@ -350,7 +350,7 @@ int SystemInterface::linkDll(ProjectInfo *buildInfo, Mode mode, std::string path
     PROCESS_INFORMATION pi;
 
     std::string prog = msvcInfo.compilerPath + "\\link.exe";
-    std::string args = std::string(mode.config == Config::DEBUG ? " /DEBUG:FASTLINK " : " ") + "/DLL /out:\"" + path + "\" " + oFiles + libStr + buildInfo->linkerFlags + msvcInfo.systemLibPaths;
+    std::string args = std::string(mode.config == Config::DEBUG ? " /DEBUG:FASTLINK " : " ") + "/DLL /out:\"" + path + "\" " + oFiles + buildInfo->linkerFlags + libStr + msvcInfo.systemLibPaths;
 
     FILE *pipe = win_popen(prog.c_str(), args.c_str(), &out, &pi);
 #elif defined(__linux__)
