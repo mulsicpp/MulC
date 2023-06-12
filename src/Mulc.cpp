@@ -19,7 +19,7 @@
 #define EXISTS std::filesystem::exists
 #define MOD_TIME std::filesystem::last_write_time
 
-#define OS_PATH(x) std::filesystem::path(x).make_preferred()
+#define OS_PATH(x) std::filesystem::relative(std::filesystem::absolute(x))
 
 Mode Mulc::mode;
 Flags Mulc::flags;
@@ -36,7 +36,7 @@ static bool isSubPath(const std::filesystem::path &base, const std::filesystem::
     std::string relative = std::filesystem::relative(sub, base).string();
     // Size check for a "." result.
     // If the path starts with "..", it's not a subdirectory.
-    return relative.size() == 1 || relative[0] != '.' && relative[1] != '.';
+    return relative.size() == 1 || relative[0] != '.' || relative[1] != '.';
 }
 
 static bool addPathIfFree(std::vector<std::string> &list, std::string element)
@@ -150,9 +150,9 @@ void Mulc::ScriptAPI::build(Mulc::Type type, std::string name)
     std::string output;
 
     // compilation
-    for (auto &tu : info->translationUnits)
+    for (auto &[key, tu] : info->translationUnits)
     {
-        tu.oFilePath = (info->buildDir / "bin" / tu.cFilePath).string() + ".o";
+        tu = {key, (info->buildDir / "bin" / key).string() + ".o"};
         printf(F_BOLD "%s" F_RESET, tu.cFilePath.c_str());
         if (globalUpdate || tuNeedsUpdate(tu))
         {
@@ -623,10 +623,10 @@ void Mulc::ScriptAPI::group(std::string group = "")
 
 void Mulc::ScriptAPI::add_source(std::string source)
 {
-    std::filesystem::path sourcePath(source);
+    std::filesystem::path sourcePath = OS_PATH(source);
     if (!EXISTS(sourcePath))
         error("The source \'%s\' does not exist", sourcePath.string().c_str());
-    if (!EXISTS(sourcePath))
+    if (!isSubPath(info->buildFilePath.parent_path(), sourcePath))
     {
         warning("The source \'%s\' got ignored, because is not inside the project", sourcePath.string().c_str());
         return;
@@ -637,36 +637,37 @@ void Mulc::ScriptAPI::add_source(std::string source)
         for (const auto &entry : iterator)
         {
             if (entry.path().extension() == ".cpp" || entry.path().extension() == ".c")
-                info->translationUnits.push_back({entry.path().string()});
+                info->translationUnits[entry.path().string()] = {};
         }
     }
     else
     {
-        info->translationUnits.push_back({OS_PATH(sourcePath).string()});
+        info->translationUnits[OS_PATH(sourcePath).string()] = {};
     }
 }
 
 void Mulc::ScriptAPI::remove_source(std::string source)
 {
-    std::filesystem::path sourcePath(source);
+    std::filesystem::path sourcePath = OS_PATH(source);
     if (!EXISTS(sourcePath))
         error("The source \'%s\' does not exist", sourcePath.string().c_str());
     if (std::filesystem::is_directory(sourcePath))
     {
-        for (int i = 0; i < info->translationUnits.size();)
-            if (isSubPath(sourcePath, info->translationUnits[i].cFilePath))
-                info->translationUnits.erase(info->translationUnits.begin() + i);
-            else
-                i++;
+        std::vector<std::string> removeKeys;
+        for (const auto &[key, tu] : info->translationUnits)
+        {
+            if (isSubPath(sourcePath, key))
+            {
+                removeKeys.push_back(key);
+            }
+        }
+
+        for (const auto &key : removeKeys)
+            info->translationUnits.erase(key);
     }
     else
     {
-        sourcePath = std::filesystem::canonical(sourcePath);
-        for (int i = 0; i < info->translationUnits.size();)
-            if (sourcePath == std::filesystem::canonical(info->translationUnits[i].cFilePath))
-                info->translationUnits.erase(info->translationUnits.begin() + i);
-            else
-                i++;
+        info->translationUnits.erase(OS_PATH(source).string());
     }
 }
 

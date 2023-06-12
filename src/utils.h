@@ -21,7 +21,7 @@
 template <class... Ts>
 void error(const char *str, Ts... args)
 {
-    printf(F_RED "ERROR: ");
+    printf(F_RED F_BOLD "ERROR: " F_RESET F_RED);
     printf(str, args...);
     printf("\n" F_RESET);
     exit(-1);
@@ -30,7 +30,7 @@ void error(const char *str, Ts... args)
 template <class... Ts>
 void syntaxError(const char *str, Ts... args)
 {
-    printf(F_RED "SYNTAX ERROR: ");
+    printf(F_RED F_BOLD "SYNTAX ERROR: " F_RESET F_RED);
     printf(str, args...);
     printf("\n" F_RESET);
     exit(-1);
@@ -39,7 +39,7 @@ void syntaxError(const char *str, Ts... args)
 template <class... Ts>
 void warning(const char *str, Ts... args)
 {
-    printf(F_YELLOW "WARNING: ");
+    printf(F_YELLOW F_BOLD "WARNING: " F_RESET F_YELLOW);
     printf(str, args...);
     printf("\n" F_RESET);
 }

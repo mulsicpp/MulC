@@ -262,7 +262,7 @@ int SystemInterface::compile(const ProjectInfo::TranslationUnit &tu, ProjectInfo
 int SystemInterface::linkApp(ProjectInfo *buildInfo, Mode mode, std::string path, std::string *output)
 {
     std::string oFiles = "";
-    for (const auto &tu : buildInfo->translationUnits)
+    for (const auto &[_, tu] : buildInfo->translationUnits)
         oFiles += "\"" + tu.oFilePath + "\" ";
 
     std::string libStr = "";
@@ -302,7 +302,7 @@ int SystemInterface::createLib(ProjectInfo *buildInfo, Mode mode, std::string pa
 {
     char buffer[1024];
     std::string oFiles = "";
-    for (const auto &tu : buildInfo->translationUnits)
+    for (const auto &[_, tu] : buildInfo->translationUnits)
         oFiles += "\"" + tu.oFilePath + "\" ";
 #if defined(_WIN32)
     HANDLE out;
@@ -337,7 +337,7 @@ int SystemInterface::createLib(ProjectInfo *buildInfo, Mode mode, std::string pa
 int SystemInterface::linkDll(ProjectInfo *buildInfo, Mode mode, std::string path, std::string *output)
 {
     std::string oFiles = "";
-    for (const auto &tu : buildInfo->translationUnits)
+    for (const auto &[_, tu] : buildInfo->translationUnits)
         oFiles += "\"" + tu.oFilePath + "\" ";
 
     std::string libStr = "";

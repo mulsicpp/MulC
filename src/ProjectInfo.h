@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <map>
 #include <filesystem>
 
 struct ProjectInfo
@@ -12,7 +13,7 @@ struct ProjectInfo
         std::string oFilePath;
     };
     
-    std::vector<TranslationUnit> translationUnits;
+    std::map<std::string, TranslationUnit> translationUnits;
 
     std::string compileFlags;
     std::string linkerFlags;
