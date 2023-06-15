@@ -98,6 +98,9 @@ void Mulc::ScriptAPI::runScript(std::string script)
     ADD_CHAI_FUNCTION_NAMED(chai, combine_string_list, "&");
     ADD_CHAI_FUNCTION_NAMED(chai, combine_list_list, "&");
 
+    for(const auto &[key, val] : flags.vars)
+        chai.add(chaiscript::const_var<std::string>(val), key);
+
     chai.add(chaiscript::const_var<std::string>(OS_NAME), "_OS");
     chai.add(chaiscript::const_var<std::string>(mode.arch == Mode::Arch::X64 ? "x64" : mode.arch == Mode::Arch::X86 ? "x86" : "unknown"), "_ARCH");
     chai.add(chaiscript::const_var<std::string>(mode.config == Mode::Config::RELEASE ? "release" : "debug"), "_CONFIG");
