@@ -28,4 +28,6 @@ struct ProjectInfo
     std::filesystem::path buildFilePath;
 
     std::filesystem::path buildDir = std::filesystem::path("mulc.build") / "default";
+
+    void *chai;
 };

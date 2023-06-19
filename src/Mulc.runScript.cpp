@@ -52,6 +52,8 @@ void Mulc::ScriptAPI::runScript(std::string script)
 
     chaiscript::ChaiScript chai;
 
+    currentInfo.chai = &chai;
+
     ADD_CHAI_FUNCTION(chai, group);
     ADD_CHAI_FUNCTION(chai, add_source);
     ADD_CHAI_FUNCTION(chai, remove_source);
@@ -101,9 +103,10 @@ void Mulc::ScriptAPI::runScript(std::string script)
     for(const auto &[key, val] : flags.vars)
         chai.add(chaiscript::const_var<std::string>(val), key);
 
-    chai.add(chaiscript::const_var<std::string>(OS_NAME), "_OS");
-    chai.add(chaiscript::const_var<std::string>(mode.arch == Mode::Arch::X64 ? "x64" : mode.arch == Mode::Arch::X86 ? "x86" : "unknown"), "_ARCH");
-    chai.add(chaiscript::const_var<std::string>(mode.config == Mode::Config::RELEASE ? "release" : "debug"), "_CONFIG");
+    chai.add(chaiscript::const_var<std::string>(OS_NAME), "OS");
+    chai.add(chaiscript::const_var<std::string>(mode.arch == Mode::Arch::X64 ? "x64" : mode.arch == Mode::Arch::X86 ? "x86" : "unknown"), "ARCH");
+    chai.add(chaiscript::const_var<std::string>(mode.config == Mode::Config::RELEASE ? "release" : "debug"), "CONFIG");
+    chai.add(chaiscript::const_var<std::string>(currentInfo.buildDir.string()), "BUILD_DIR");
 
     try
     {
@@ -115,4 +118,8 @@ void Mulc::ScriptAPI::runScript(std::string script)
     }
 
     popInfo();
+}
+
+void Mulc::ScriptAPI::addConst(std::string name, const std::string value) {
+    ((chaiscript::ChaiScript *)info->chai)->add(chaiscript::const_var<std::string>(value), name);
 }

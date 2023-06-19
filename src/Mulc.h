@@ -66,6 +66,8 @@ private:
     public:
         static void runScript(std::string script);
 
+        static void addConst(std::string name, const std::string value);
+
         static void group(std::string group);
 
         static void add_source(std::string source);

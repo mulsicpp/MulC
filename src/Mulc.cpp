@@ -619,6 +619,7 @@ void Mulc::ScriptAPI::group(std::string group = "")
         info->buildDir = std::filesystem::path("mulc.build") / group;
     else
         info->buildDir = std::filesystem::path("mulc.build") / "default";
+    addConst("BUILD_DIR", info->buildDir.string());
 }
 
 void Mulc::ScriptAPI::add_source(std::string source)
