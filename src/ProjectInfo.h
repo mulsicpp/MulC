@@ -30,4 +30,10 @@ struct ProjectInfo
     std::filesystem::path buildDir = std::filesystem::path("mulc.build") / "default";
 
     void *chai;
+
+    std::filesystem::path packages = "";
+
+    std::filesystem::path currentPackage = "";
+
+    std::string pkgData = "";
 };

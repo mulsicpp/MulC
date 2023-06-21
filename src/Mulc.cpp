@@ -828,6 +828,81 @@ void Mulc::ScriptAPI::msg(std::string msg)
     printf(F_BOLD "[%s]: %s\n" F_RESET, info->buildFilePath.filename().string().c_str(), msg.c_str());
 }
 
+
+
+void Mulc::ScriptAPI::packages(std::string packages)
+{
+    info->packages = OS_PATH(packages);
+    addConst("PACKAGES", info->packages.string());
+}
+
+
+
+void Mulc::ScriptAPI::start_package(std::string package)
+{
+    info->currentPackage = info->packages / package;
+
+    std::filesystem::create_directories(info->currentPackage);
+
+    addConst("CURRENT_PACKAGE", info->currentPackage.string());
+    addConst("PKG_INCLUDES", (info->currentPackage / "include").string());
+    addConst("PKG_LIBS", (info->currentPackage / "lib").string());
+}
+
+void Mulc::ScriptAPI::finish_package(void)
+{
+    FILE *file = fopen((std::filesystem::absolute(info->currentPackage / "pkgData")).string().c_str(), "w");
+    if(file == nullptr) {
+        error("Could not finish the package \'%s\'", info->currentPackage.string().c_str());
+    }
+
+    fprintf(file, "%s", info->pkgData.c_str());
+    fclose(file);
+
+    info->currentPackage = "";
+    addConst("CURRENT_PACKAGE", "");
+    addConst("PKG_INCLUDES", "");
+    addConst("PKG_LIBS", "");
+}
+
+
+
+void Mulc::ScriptAPI::use_package(std::string package)
+{
+}
+
+
+
+void Mulc::ScriptAPI::package_include_path(std::string includePath)
+{
+    if(info->currentPackage == "")
+        error("\'start_package\' needs to be called before using \'package_include_path\'");
+    info->pkgData += "I" + includePath + "\n";
+}
+
+void Mulc::ScriptAPI::package_library(std::string lib)
+{
+    if(info->currentPackage == "")
+        error("\'start_package\' needs to be called before using \'package_library\'");
+    info->pkgData += "L" + lib + "\n";
+}
+
+void Mulc::ScriptAPI::package_library_path(std::string libPath)
+{
+    if(info->currentPackage == "")
+        error("\'start_package\' needs to be called before using \'package_library_path\'");
+    info->pkgData += "P" + libPath + "\n";
+}
+
+void Mulc::ScriptAPI::package_named_library(std::string namedLib)
+{
+    if(info->currentPackage == "")
+        error("\'start_package\' needs to be called before using \'package_named_library\'");
+    info->pkgData += "N" + namedLib + "\n";
+}
+
+
+
 std::string Mulc::ScriptAPI::app(std::string name)
 {
 #if defined(_WIN32)

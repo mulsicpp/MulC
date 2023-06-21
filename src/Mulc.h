@@ -98,6 +98,18 @@ private:
         static void cmd(std::string cmd);
         static void msg(std::string msg);
 
+        static void packages(std::string packages);
+
+        static void start_package(std::string package);
+        static void finish_package(void);
+
+        static void use_package(std::string package);
+
+        static void package_include_path(std::string includePath);
+        static void package_library(std::string lib);
+        static void package_library_path(std::string libPath);
+        static void package_named_library(std::string namedLib);
+
         static std::string app(std::string name);
         static std::string lib(std::string name);
         static std::string dll(std::string name);
