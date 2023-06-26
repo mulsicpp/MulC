@@ -232,34 +232,38 @@ void Mulc::ScriptAPI::build(Mulc::Type type, std::string name, bool isPackage)
 
     printf("%s", output.c_str());
 
-    std::filesystem::path currentPackage = info->packages / name;
-
-    std::filesystem::create_directories(currentPackage);
-
-    if (isPackage && type == Type::LIB)
+    if (isPackage)
     {
-        FILE *file = fopen((currentPackage / "usedPackages").string().c_str(), "w");
-        if (file == nullptr)
-        {
-            error("Could not finish the package \'%s\'", currentPackage.string().c_str());
-        }
-        for (const auto &package : info->usedPackages)
-            fprintf(file, "%s\n", package.c_str());
-        fclose(file);
 
-        file = fopen((currentPackage / "sysLibs").string().c_str(), "w");
-        if (file == nullptr)
-        {
-            error("Could not finish the package \'%s\'", currentPackage.string().c_str());
-        }
-        for (const auto &lib : info->packageSystemLibraries)
-            fprintf(file, "%s\n", lib.c_str());
-        fclose(file);
-    }
+        std::filesystem::path currentPackage = info->packages / name;
 
-    for (std::string headers : info->packageHeaders)
-    {
-        export_headers(headers, (currentPackage / "include").string(), true);
+        std::filesystem::create_directories(currentPackage);
+
+        if (type == Type::LIB)
+        {
+            FILE *file = fopen((currentPackage / "usedPackages").string().c_str(), "w");
+            if (file == nullptr)
+            {
+                error("Could not finish the package \'%s\'", currentPackage.string().c_str());
+            }
+            for (const auto &package : info->usedPackages)
+                fprintf(file, "%s\n", package.c_str());
+            fclose(file);
+
+            file = fopen((currentPackage / "sysLibs").string().c_str(), "w");
+            if (file == nullptr)
+            {
+                error("Could not finish the package \'%s\'", currentPackage.string().c_str());
+            }
+            for (const auto &lib : info->packageSystemLibraries)
+                fprintf(file, "%s\n", lib.c_str());
+            fclose(file);
+        }
+
+        for (std::string headers : info->packageHeaders)
+        {
+            export_headers(headers, (currentPackage / "include").string(), true);
+        }
     }
 
     saveCompileFootprint(footprint);
