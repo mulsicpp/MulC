@@ -6,6 +6,8 @@
 #include <map>
 #include <filesystem>
 
+#include <set>
+
 struct ProjectInfo
 {
     struct TranslationUnit {
@@ -33,7 +35,10 @@ struct ProjectInfo
 
     std::filesystem::path packages = "";
 
-    std::filesystem::path currentPackage = "";
+    std::vector<std::string> usedPackages = {};
+    std::vector<std::string> packageHeaders = {};
+    std::vector<std::string> packageSystemLibraries = {};
 
-    std::string pkgData = "";
+    std::set<std::string> resolvedPackages;
+
 };

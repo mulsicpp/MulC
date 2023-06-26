@@ -51,7 +51,7 @@ private:
 
         static void bindInfo(ProjectInfo *info);
 
-        static void build(Type type, std::string path);
+        static void build(Type type, std::string path, bool isPackage = false);
 
         static std::string generateCompileFootprint(void);
 
@@ -62,6 +62,8 @@ private:
         static void saveHeaderDependencies(void);
 
         static bool tuNeedsUpdate(ProjectInfo::TranslationUnit tu);
+
+        static void resolvePackage(const std::string &name, bool withInclude);
 
     public:
         static void runScript(std::string script);
@@ -91,24 +93,20 @@ private:
         static void export_files_std(std::string srcPath, std::string dstPath);
         static void export_headers_std(std::string srcPath, std::string dstPath);
 
-        static void build_app(std::string path);
-        static void build_lib(std::string path);
-        static void build_dll(std::string path);
+        static void build_app(std::string name);
+        static void build_lib(std::string name);
+        static void build_dll(std::string name);
+
+        static void build_lib_package(std::string name);
+        static void build_dll_package(std::string name);
 
         static void cmd(std::string cmd);
         static void msg(std::string msg);
 
         static void packages(std::string packages);
-
-        static void start_package(std::string package);
-        static void finish_package(void);
-
         static void use_package(std::string package);
-
-        static void package_include_path(std::string includePath);
-        static void package_library(std::string lib);
-        static void package_library_path(std::string libPath);
-        static void package_named_library(std::string namedLib);
+        static void package_system_library(std::string lib);
+        static void package_headers(std::string source);
 
         static std::string app(std::string name);
         static std::string lib(std::string name);

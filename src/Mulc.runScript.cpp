@@ -71,16 +71,14 @@ void Mulc::ScriptAPI::runScript(std::string script)
     ADD_CHAI_FUNCTION(chai, build_app);
     ADD_CHAI_FUNCTION(chai, build_lib);
     ADD_CHAI_FUNCTION(chai, build_dll);
+    ADD_CHAI_FUNCTION(chai, build_lib_package);
+    ADD_CHAI_FUNCTION(chai, build_dll_package);
     ADD_CHAI_FUNCTION(chai, cmd);
     ADD_CHAI_FUNCTION(chai, msg);
     ADD_CHAI_FUNCTION(chai, packages);
-    ADD_CHAI_FUNCTION(chai, start_package);
-    ADD_CHAI_FUNCTION(chai, finish_package);
     ADD_CHAI_FUNCTION(chai, use_package);
-    ADD_CHAI_FUNCTION(chai, package_include_path);
-    ADD_CHAI_FUNCTION(chai, package_library);
-    ADD_CHAI_FUNCTION(chai, package_library_path);
-    ADD_CHAI_FUNCTION(chai, package_named_library);
+    ADD_CHAI_FUNCTION(chai, package_system_library);
+    ADD_CHAI_FUNCTION(chai, package_headers);
 
     ADD_CHAI_FUNCTION(chai, app);
     ADD_CHAI_FUNCTION(chai, lib);
@@ -114,13 +112,12 @@ void Mulc::ScriptAPI::runScript(std::string script)
     chai.add(chaiscript::const_var<std::string>(OS_NAME), "OS");
     chai.add(chaiscript::const_var<std::string>(mode.arch == Mode::Arch::X64 ? "x64" : mode.arch == Mode::Arch::X86 ? "x86" : "unknown"), "ARCH");
     chai.add(chaiscript::const_var<std::string>(mode.config == Mode::Config::RELEASE ? "release" : "debug"), "CONFIG");
+    chai.add(chaiscript::const_var<std::string>(std::string(OS_NAME) + "." + (mode.arch == Mode::Arch::X64 ? "x64" : mode.arch == Mode::Arch::X86 ? "x86" : "unknown") + "." + (mode.config == Mode::Config::RELEASE ? "release" : "debug")), "MODE");
 
     chai.add(chaiscript::const_var<std::string>(currentInfo.buildDir.string()), "BUILD_DIR");
     
     chai.add(chaiscript::const_var<std::string>(""), "PACKAGES");
-    chai.add(chaiscript::const_var<std::string>(""), "CURRENT_PACKAGE");
-    chai.add(chaiscript::const_var<std::string>(""), "PKG_INCLUDES");
-    chai.add(chaiscript::const_var<std::string>(""), "PKG_LIBS");
+    chai.add(chaiscript::const_var<std::string>("default"), "GROUP");
 
     try
     {

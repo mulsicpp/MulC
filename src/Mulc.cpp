@@ -132,7 +132,7 @@ void Mulc::runScript(void)
     ScriptAPI::runScript(flags.path);
 }
 
-void Mulc::ScriptAPI::build(Mulc::Type type, std::string name)
+void Mulc::ScriptAPI::build(Mulc::Type type, std::string name, bool isPackage)
 {
     std::filesystem::create_directories(info->buildDir);
 
@@ -144,6 +144,11 @@ void Mulc::ScriptAPI::build(Mulc::Type type, std::string name)
         std::filesystem::remove_all(info->buildDir / "bin");
 
     loadHeaderDependencies();
+
+    for (auto package : info->usedPackages)
+    {
+        resolvePackage(package, true);
+    }
 
     using BType = Mulc::Type;
 
@@ -177,8 +182,8 @@ void Mulc::ScriptAPI::build(Mulc::Type type, std::string name)
     }
 
     // linking
-    std::string path = (info->buildDir / (type == Type::APP ? "out" : "lib") / (type == Type::APP ? app(name) : type == Type::LIB ? lib(name)
-                                                                                                                                  : dll(name)))
+    std::string path = ((isPackage ? info->packages / name : info->buildDir) / (type == Type::APP ? "out" : "lib") / (type == Type::APP ? app(name) : type == Type::LIB ? lib(name)
+                                                                                                                                                                        : dll(name)))
                            .string();
 
     std::filesystem::create_directories(std::filesystem::path(path).parent_path());
@@ -226,6 +231,36 @@ void Mulc::ScriptAPI::build(Mulc::Type type, std::string name)
     }
 
     printf("%s", output.c_str());
+
+    std::filesystem::path currentPackage = info->packages / name;
+
+    std::filesystem::create_directories(currentPackage);
+
+    if (isPackage && type == Type::LIB)
+    {
+        FILE *file = fopen((currentPackage / "usedPackages").string().c_str(), "w");
+        if (file == nullptr)
+        {
+            error("Could not finish the package \'%s\'", currentPackage.string().c_str());
+        }
+        for (const auto &package : info->usedPackages)
+            fprintf(file, "%s\n", package.c_str());
+        fclose(file);
+
+        file = fopen((currentPackage / "sysLibs").string().c_str(), "w");
+        if (file == nullptr)
+        {
+            error("Could not finish the package \'%s\'", currentPackage.string().c_str());
+        }
+        for (const auto &lib : info->packageSystemLibraries)
+            fprintf(file, "%s\n", lib.c_str());
+        fclose(file);
+    }
+
+    for (std::string headers : info->packageHeaders)
+    {
+        export_headers(headers, (currentPackage / "include").string(), true);
+    }
 
     saveCompileFootprint(footprint);
 
@@ -339,6 +374,66 @@ bool Mulc::ScriptAPI::tuNeedsUpdate(ProjectInfo::TranslationUnit tu)
             return true;
     }
     return false;
+}
+
+void Mulc::ScriptAPI::resolvePackage(const std::string &name, bool withInclude)
+{
+    if (info->resolvedPackages.find(name) != info->resolvedPackages.end())
+        return;
+
+    printf("resolving %s\n", name.c_str());
+
+    if (withInclude && std::filesystem::exists(info->packages / name / "include"))
+        include_path((info->packages / name / "include").string());
+
+    if (std::filesystem::exists(info->packages / name / "lib"))
+    {
+        std::filesystem::recursive_directory_iterator it = std::filesystem::recursive_directory_iterator(info->packages / name / "lib");
+        for (const auto &entry : it)
+        {
+#if defined(_WIN32)
+            if (entry.path().extension() == ".lib")
+#elif defined(__linux__)
+            if (entry.path().extension() == ".a" || entry.path().extension() == ".so")
+#endif
+            {
+                library(entry.path().string());
+            }
+        }
+    }
+    if (std::filesystem::exists(info->packages / name / "lib" / lib(name)))
+        library((info->packages / name / "lib" / lib(name)).string());
+    else if (std::filesystem::exists(info->packages / name / "lib" / dll(name)))
+        library((info->packages / name / "lib" / dll(name)).string());
+
+    char buffer[2000];
+    FILE *file = fopen((info->packages / name / "usedPackages").string().c_str(), "r");
+
+    if (file == nullptr)
+        return;
+
+    while (fgets(buffer, 2000, file))
+    {
+        if (buffer[strlen(buffer) - 1] == '\n')
+            buffer[strlen(buffer) - 1] = 0;
+        resolvePackage(buffer, false);
+    }
+
+    fclose(file);
+
+    file = fopen((info->packages / name / "sysLibs").string().c_str(), "r");
+
+    if (file == nullptr)
+        return;
+
+    while (fgets(buffer, 2000, file))
+    {
+        if (buffer[strlen(buffer) - 1] == '\n')
+            buffer[strlen(buffer) - 1] = 0;
+        named_library(buffer);
+    }
+
+    fclose(file);
 }
 
 std::filesystem::path Mulc::ScriptAPI::getScriptPath(std::string path)
@@ -620,6 +715,7 @@ void Mulc::ScriptAPI::group(std::string group = "")
     else
         info->buildDir = std::filesystem::path("mulc.build") / "default";
     addConst("BUILD_DIR", info->buildDir.string());
+    addConst("GROUP", group.size() > 0 ? group : "default");
 }
 
 void Mulc::ScriptAPI::add_source(std::string source)
@@ -695,7 +791,7 @@ void Mulc::ScriptAPI::compile_flag(std::string compileFlag)
 
 void Mulc::ScriptAPI::library(std::string lib)
 {
-    addPathIfFree(info->libs, lib);
+    addPathIfFree(info->libs, "\"" + lib + "\" ");
 }
 
 void Mulc::ScriptAPI::library_path(std::string libPath)
@@ -816,6 +912,16 @@ void Mulc::ScriptAPI::build_dll(std::string name)
     build(Type::DLL, name);
 }
 
+void Mulc::ScriptAPI::build_lib_package(std::string name)
+{
+    build(Type::LIB, name, true);
+}
+
+void Mulc::ScriptAPI::build_dll_package(std::string name)
+{
+    build(Type::DLL, name, true);
+}
+
 void Mulc::ScriptAPI::cmd(std::string cmd)
 {
     printf("Running command " F_BLUE "%s" F_RESET ":\n\n", cmd.c_str());
@@ -828,80 +934,26 @@ void Mulc::ScriptAPI::msg(std::string msg)
     printf(F_BOLD "[%s]: %s\n" F_RESET, info->buildFilePath.filename().string().c_str(), msg.c_str());
 }
 
-
-
 void Mulc::ScriptAPI::packages(std::string packages)
 {
     info->packages = OS_PATH(packages);
     addConst("PACKAGES", info->packages.string());
 }
 
-
-
-void Mulc::ScriptAPI::start_package(std::string package)
-{
-    info->currentPackage = info->packages / package;
-
-    std::filesystem::create_directories(info->currentPackage);
-
-    addConst("CURRENT_PACKAGE", info->currentPackage.string());
-    addConst("PKG_INCLUDES", (info->currentPackage / "include").string());
-    addConst("PKG_LIBS", (info->currentPackage / "lib").string());
-}
-
-void Mulc::ScriptAPI::finish_package(void)
-{
-    FILE *file = fopen((std::filesystem::absolute(info->currentPackage / "pkgData")).string().c_str(), "w");
-    if(file == nullptr) {
-        error("Could not finish the package \'%s\'", info->currentPackage.string().c_str());
-    }
-
-    fprintf(file, "%s", info->pkgData.c_str());
-    fclose(file);
-
-    info->currentPackage = "";
-    addConst("CURRENT_PACKAGE", "");
-    addConst("PKG_INCLUDES", "");
-    addConst("PKG_LIBS", "");
-}
-
-
-
 void Mulc::ScriptAPI::use_package(std::string package)
 {
+    info->usedPackages.push_back(package);
 }
 
-
-
-void Mulc::ScriptAPI::package_include_path(std::string includePath)
+void Mulc::ScriptAPI::package_system_library(std::string lib)
 {
-    if(info->currentPackage == "")
-        error("\'start_package\' needs to be called before using \'package_include_path\'");
-    info->pkgData += "I" + includePath + "\n";
+    info->packageSystemLibraries.push_back(lib);
 }
 
-void Mulc::ScriptAPI::package_library(std::string lib)
+void Mulc::ScriptAPI::package_headers(std::string source)
 {
-    if(info->currentPackage == "")
-        error("\'start_package\' needs to be called before using \'package_library\'");
-    info->pkgData += "L" + lib + "\n";
+    info->packageHeaders.push_back(source);
 }
-
-void Mulc::ScriptAPI::package_library_path(std::string libPath)
-{
-    if(info->currentPackage == "")
-        error("\'start_package\' needs to be called before using \'package_library_path\'");
-    info->pkgData += "P" + libPath + "\n";
-}
-
-void Mulc::ScriptAPI::package_named_library(std::string namedLib)
-{
-    if(info->currentPackage == "")
-        error("\'start_package\' needs to be called before using \'package_named_library\'");
-    info->pkgData += "N" + namedLib + "\n";
-}
-
-
 
 std::string Mulc::ScriptAPI::app(std::string name)
 {

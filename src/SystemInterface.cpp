@@ -267,7 +267,7 @@ int SystemInterface::linkApp(ProjectInfo *buildInfo, Mode mode, std::string path
 
     std::string libStr = "";
     for (const auto &lib : buildInfo->libs)
-        libStr += "\"" + lib + "\" ";
+        libStr += lib + " ";
 
     char buffer[1024];
 #if defined(_WIN32)
