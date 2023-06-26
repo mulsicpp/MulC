@@ -434,6 +434,8 @@ void Mulc::ScriptAPI::resolvePackage(const std::string &name, bool withInclude)
     }
 
     fclose(file);
+
+    info->resolvedPackages.insert(name);
 }
 
 std::filesystem::path Mulc::ScriptAPI::getScriptPath(std::string path)
