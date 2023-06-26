@@ -884,7 +884,12 @@ void Mulc::ScriptAPI::export_headers(std::string srcPath, std::string dstPath, b
         {
             auto dstFile = std::filesystem::path(dstPath) / std::filesystem::proximate(entry.path(), srcPath).parent_path();
             std::filesystem::create_directories(dstFile);
+
+            const auto modTime = std::filesystem::last_write_time(entry.path());
+
             std::filesystem::copy(entry.path(), std::filesystem::canonical(dstFile) / entry.path().filename(), co);
+
+            std::filesystem::last_write_time(std::filesystem::canonical(dstFile) / entry.path().filename(), modTime);
         }
     }
     printf(F_CYAN "Exported headers from \'%s\' to \'%s\'\n" F_RESET, srcPath.c_str(), dstPath.c_str());
